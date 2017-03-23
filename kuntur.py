@@ -240,7 +240,7 @@ else:
         raise RuntimeError('No support for secondaryFilenames yet, sorry')
 
     if len(process.source.fileNames) < nJobs:
-        raise RuntimeError('Cannot split {0} on {1} jobs', len(process.source.fileNames), nJobs)
+        raise RuntimeError('Cannot split {0} files on {1} jobs'.format(len(process.source.fileNames), nJobs))
 
     # Split the inputfiles in nJobs groups
     inputFiles = ListSplit(process.source.fileNames, nJobs)
@@ -255,9 +255,10 @@ else:
         return fileName.__class__('%s_%03d%s' % (name, i, ext))
 
     for j in xrange(nJobs):
-
+        import FWCore.ParameterSet.Config as cms
+        
         # Update process files
-        process.source.fileNames = inputFiles[j]
+        process.source.fileNames = cms.untracked.vstring(inputFiles[j])
 
         for n, fileName in fs.iteritems():
             fileService = getattr(process, n)
