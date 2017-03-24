@@ -9,13 +9,14 @@
 # testmatch    = 3 days
 # nextweek     = 1 week
 
-import argparse
 import sys
 import os
 import os.path as path
 import re
 import subprocess
+import argparse
 from distutils.dir_util import mkpath
+
 
 class Job(object):
     """docstring for Job"""
@@ -24,7 +25,7 @@ class Job(object):
         self.jid = jid
         self.cfgdump = None
         self.cfgpath = None
-        
+
 
 # -----------------------------------------------------------------------------
 class SysArgVSentry(object):
@@ -45,7 +46,7 @@ class SysArgVSentry(object):
 
 
 # -----------------------------------------------------------------------------
-def ListSplit(lst, n):
+def SplitList(lst, n):
     cls = lst.__class__
     # Group size (approximate)
     gs = len(lst) / n
@@ -243,7 +244,7 @@ else:
         raise RuntimeError('Cannot split {0} files on {1} jobs'.format(len(process.source.fileNames), nJobs))
 
     # Split the inputfiles in nJobs groups
-    inputFiles = ListSplit(process.source.fileNames, nJobs)
+    inputFiles = SplitList(process.source.fileNames, nJobs)
 
     # Save original list of output files
     fs = {n: s.fileName for n, s in process.services.iteritems() if s.type_() == 'TFileService'}
@@ -256,7 +257,7 @@ else:
 
     for j in xrange(nJobs):
         import FWCore.ParameterSet.Config as cms
-        
+
         # Update process files
         process.source.fileNames = cms.untracked.vstring(inputFiles[j])
 
@@ -326,7 +327,7 @@ Queue 1
 # -----------------------------------------------------------------------------
 # Save configurations to file
 for job in jobs:
-    print "* Saving cmssw configuration",job.cfgpath
+    print "* Saving cmssw configuration", job.cfgpath
     # print job.cfgpath, len(job.cfgdump), job.logpath, job.outpath
     with open(job.cfgpath, 'w') as cfgFile:
         cfgFile.write(job.cfgdump)
