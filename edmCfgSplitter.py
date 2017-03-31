@@ -15,6 +15,13 @@ from ktools import JidInserter, CheckExt, SplitList, SysArgVSentry
 class ConfigSplitter(object):
     '''Class to split a CMSSW configuration in nJobs sub-configurations
     '''
+
+    _log = logging.getLogger('ConfigSplitter')
+
+    @property
+    def log(self):
+        return self._log
+
     def __init__(self,):
         super(ConfigSplitter, self).__init__()
 
@@ -52,7 +59,7 @@ class ConfigSplitter(object):
 
         cfgArgV = [self.args.cmsswCfg]+self.args.cmsswArgs
 
-        print "--- Loading CMSSW configuration"  # , repr(args.cmsswCfg)
+        self.log.info("--- Loading CMSSW configuration")  # , repr(args.cmsswCfg)
         process = None
         # Import the config file, applying the right args
         with SysArgVSentry(cfgArgV) as argvSentry:
@@ -65,7 +72,7 @@ class ConfigSplitter(object):
                 process = cfgGlobals['process']
             except KeyError:
                 raise RuntimeError('CMSSW process not found in config file '+self.cfgfilepath)
-        print "--- Configuration loading completed"
+        self.log.info("--- Configuration loading completed")
 
         self.process = process
     # -----------------------------------------------------------------------------
@@ -129,9 +136,9 @@ class ConfigSplitter(object):
         configurations = self.configurations
 
         # Save the newly made configurations to file
-        print "--- Saving config files"
+        self.log.info("--- Saving config files")
         for j, cfgData in configurations.iteritems():
-            print '    '+cfgData['cfgpath']
+            self.log.debug('    '+cfgData['cfgpath'])
             with open(cfgData['cfgpath'], 'w') as cfgFile:
                 cfgFile.write(cfgData['cfg'])
 
@@ -149,7 +156,7 @@ class ConfigSplitter(object):
         jsonreceipt['jobs'] = jobs
 
         # Save the receipt to file
-        print "--- Saving recepit"
+        self.log.info("--- Saving recepit")
         with open(self.recepit, 'w') as receipt:
             receipt.write(json.dumps(jsonreceipt, sort_keys=True, indent=4, separators=(',', ': ')))
     # -----------------------------------------------------------------------------
@@ -158,6 +165,9 @@ class ConfigSplitter(object):
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.DEBUG)
+
     splitter = ConfigSplitter()
     splitter.parse()
     splitter.setup()

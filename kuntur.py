@@ -344,7 +344,7 @@ for job in jobs:
 # -----------------------------------------------------------------------------
 if not args.dryRun:
     print "* Creating CMSSW tarball", tarballpath
-    zipdirs = ['bin', 'lib', 'python']
+    zipdirs = ['bin', 'lib', 'python', 'data']
     # Zip the good stuff
     subprocess.check_call(['tar', 'cvfz', tarballpath, '--directory='+cmsswBase] + zipdirs)
 # -----------------------------------------------------------------------------
