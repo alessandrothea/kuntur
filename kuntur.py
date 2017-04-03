@@ -101,7 +101,13 @@ class SysArgVSentry(object):
 class Job(object):
     '''Plain class to hold job attributes
     '''
-    pass
+    nfiles = None
+    cfgpath = None
+    cfg = None
+    logpath = None
+    outpath = None
+    errpath = None
+    condorcardpath = None
 # -----------------------------------------------------------------------------
 
 # Condor job flavours
@@ -133,15 +139,20 @@ class ArgParser(object):
         super(ArgParser, self).__init__()
 
         parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('-n', dest='dryRun', action='store_true')
-        parser.add_argument('-j', dest='nJobs', type=int, default=1)
-        parser.add_argument('-f', dest='flavour', choices=self.flavours, default=None)
+        parser.add_argument('-n', '--dry-run', dest='dryRun', action='store_true', help="Dry run. Generates the job files but doesn't submit the jobs.")
+        parser.add_argument('-j', dest='nJobs', type=int, default=1, help="Number of jobs")
+        parser.add_argument('-f', dest='flavour', choices=self.flavours, default=None, help='Codor job flavour')
+        parser.add_argument('-d', dest='jobDir', default='work', help='Name of the direcotry where job data is stored.')
         parser.add_argument('cmsswCfgPath', metavar='CMSSWCFG', action=CheckExt, choiches=['py'])
         parser.add_argument('cmsswArgs', metavar='CMSSWARGS', nargs=argparse.REMAINDER)
-        self.args = vars(parser.parse_args(argv))
+        self._args = parser.parse_args(argv)
 
-        self.args['cmsswBase'] = os.environ['CMSSW_BASE']
-        self.args['cmsswVersion'] = os.environ['CMSSW_VERSION']
+        self._args.cmsswBase = os.environ['CMSSW_BASE']
+        self._args.cmsswVersion = os.environ['CMSSW_VERSION']
+
+    @property
+    def args(self):
+        return vars(self._args)
 # -----------------------------------------------------------------------------
 
 
@@ -161,6 +172,9 @@ class Kuntur(object):
     flavour: string
         Flavour cof the conder job
 
+    jobDir: string
+        Name of the job directory
+
     cmsswCfgPath: string
         CMSSW configuration file
 
@@ -176,7 +190,7 @@ class Kuntur(object):
 
     log = logging.getLogger('Kuntur')
 
-    workPrefix = 'work'
+    # workPrefix = 'work'
     tarballname = 'cmsswpod.tgz'
     scriptname = 'kundur_worker'
     condorcardname = 'condor.card'
@@ -265,7 +279,7 @@ Queue 1
 '''
         return tmpl
     # -----------------------------------------------------------------------------
-    
+
 
     # -----------------------------------------------------------------------------
     def prepare(self):
@@ -284,21 +298,7 @@ Queue 1
         # Remove _cfg postfix if exists
         self.cfgname = re.sub('_cfg$', '', self.cfgfullname)
 
-        # Name of the new working area
-        # workdir = '{0}_{1}_{2}'.format(
-        #     workPrefix,
-        #     cfgname,
-        #     time.strftime('%Y%m%d_%H%M%S')
-        # )
-        workdir = path.join(
-            os.getcwd(),
-            '{0}_{1}'.format(
-                self.workPrefix,
-                self.cfgname
-            )
-        )
-
-        workdir = path.join(os.getcwd(), self.workPrefix)
+        workdir = path.join(os.getcwd(), self.jobDir)
         indir = path.join(workdir, 'ins')
         outdir = path.join(workdir, 'out')
         logdir = path.join(workdir, 'log')
@@ -325,7 +325,10 @@ Queue 1
         '''
 
         # Delete the old directory
-        subprocess.call('rm -rf {0}'.format(self.workdir), shell=True)
+        # subprocess.call('rm -rf {0}'.format(self.workdir), shell=True)
+        
+        if path.exists(self.workdir):
+            raise RuntimeError("Directory %s already exists." % self.workdir)
 
         self.log.info('+ Creating work area')
         # Create all required directories
@@ -420,10 +423,6 @@ Queue 1
     # -----------------------------------------------------------------------------
     def writeWorkerScript(self):
 
-        # Local reference
-        # cmsswVersion = self.cfgSplitRcpt['cmsswVersion']
-        # cmsswBase    = self.cfgSplitRcpt['cmsswBase']
-
         self.log.info('+ Generating worker script')
         script = self.scripttmpl.format(**vars(self))
 
@@ -451,16 +450,6 @@ Queue 1
             self.log.info('  %d | Condor card: %s', i, job.condorcardpath)
             with open(job.condorcardpath, 'w') as condorfile:
                 condorfile.write(self.condortmpl.format(**pars))
-    # -----------------------------------------------------------------------------
-
-    # -----------------------------------------------------------------------------
-    def tarCMSSWOld(self):
-
-        self.log.info("+ Creating CMSSW tarball ")
-        zipdirs = [d for d in ['bin', 'lib', 'python', 'data'] if path.exists(path.join(self.cmsswBase, d))]
-        # Zip the good stuff
-        subprocess.check_call(['tar', 'cvfz', self.tarballpath, '--directory='+self.cmsswBase] + zipdirs)
-        self.log.info('  tarball: %s', self.tarballpath)
     # -----------------------------------------------------------------------------
 
     # -----------------------------------------------------------------------------
